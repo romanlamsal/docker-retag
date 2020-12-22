@@ -1,0 +1,46 @@
+name: running-tests
+
+on: push
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+      SOURCE_IMAGE: romanlamsal/docker-retag-test:test
+      TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}
+    steps:
+      # GIVEN
+      - uses: actions/checkout@v1
+      - name: "Push example image to registry"
+        run: |
+          docker pull -q alpine:latest
+          docker build -t testimage:test -<<EOF
+          FROM alpine:latest
+          ENV foo=bar
+          EOF
+          docker tag testimage:test $SOURCE_IMAGE
+          docker login -u romanlamsal -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          docker push $SOURCE_IMAGE
+          docker image rm $SOURCE_IMAGE
+      # WHEN
+      - name: "Run action"
+        uses: ./
+        with:
+          source-image: "$SOURCE_IMAGE"
+          target-image: "$TARGET_IMAGE"
+      # THEN
+      - name: "Compare digests"
+        run: |
+          ./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE
+          if [ "$?" -eq 2 ]; then
+            exit 0
+          fi
+          # docker pull $SOURCE_IMAGE
+          # docker pull $TARGET_IMAGE
+          # SOURCE_DIGEST=docker inspect --format='{{index .RepoDigests 0}}' $SOURCE_IMAGE
+          # TARGET_DIGEST=docker inspect --format='{{index .RepoDigests 0}}' $TARGET_IMAGE
+          # echo "$SOURCE_DIGEST"
+          # echo "$TARGET_DIGEST"
+          # echo [ "$SOURCE_DIGEST" = "$TARGET_DIGEST"]
+          # exit [ "$SOURCE_DIGEST" = "$TARGET_DIGEST"]

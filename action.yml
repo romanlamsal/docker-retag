@@ -1,35 +1,35 @@
 name: 'Docker Retag'
 description: 'Action to add a tag to an existing remote docker image.'
 inputs:
-  image:
-    description: 'Image name without tag'
-    required: true
-  source-tag:
+  source-image:
     description: 'Tag to use as source'
     required: true
-  target-tag:
+  target-image:
     description: 'tag to end up with'
     required: true
 runs:
   using: "composite"
   steps:
+    - name: "Check if images are already equal."
+      run: |
+        ./compare_digests.sh ${{ inputs.source-image }} ${{ inputs.target-image }}
+        echo "images_are_equal=$?" >> $GITHUB_ENV
+      shell: bash
+      env:
+        # TODO: once 'docker manifest' is non-experimental, remove this
+        DOCKER_CLI_EXPERIMENTAL: enabled
     # TODO: once 'if' statements become available in composite actions split this step
     # see https://github.com/actions/runner/issues/646
     # TODO: Try to retag without pull
-    - run: |
-        ./compare_digests.sh $FULL_SOURCE_IMAGE $FULL_TARGET_IMAGE
-        hasChanged="$?"
-        if [ "$hasChanged" -eq 2 ]; then
-          docker pull -q $FULL_SOURCE_IMAGE
-          docker tag $FULL_SOURCE_IMAGE $FULL_TARGET_IMAGE
-          docker push $FULL_TARGET_IMAGE
-        elif [ "$hasChanged" -eq 1]; then
+    - name: "Update image tag."
+      run: |
+        if [ "$images_are_equal" -eq 2 ]; then
+          docker pull -q ${{ inputs.source-image }}
+          docker tag ${{ inputs.source-image }} ${{ inputs.target-image }}
+          docker push ${{ inputs.target-image }}
+          exit 0
+        elif [ "$images_are_equal" -eq 1]; then
           echo "An error occured."
           exit 1
         fi
       shell: bash
-      env:
-        FULL_SOURCE_IMAGE: ${{ inputs.image }}:${{ inputs.source-tag }}
-        FULL_TARGET_IMAGE: ${{ inputs.image }}:${{ inputs.target-tag }}
-        # TODO: once 'docker manifest' is non-experimental, remove this
-        DOCKER_CLI_EXPERIMENTAL: enabled
