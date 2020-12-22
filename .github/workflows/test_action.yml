@@ -7,20 +7,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: enabled
-      SOURCE_IMAGE: romanlamsal/docker-retag-test:test
-      TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}
+      SOURCE_IMAGE: romanlamsal/docker-retag-test:test-equal
+      TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}-equal
     steps:
       # GIVEN
       - uses: actions/checkout@v1
       - name: "Push example image to registry"
         run: |
-          docker pull -q alpine:latest
-          docker build -t testimage:test -<<EOF
-          FROM alpine:latest
-          ENV foo=bar
-          EOF
-          docker tag testimage:test $SOURCE_IMAGE
           docker login -u romanlamsal -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          docker pull -q alpine:latest
+          echo "FROM alpine:latest" | docker build -t testimage:test -
+          docker tag testimage:test $SOURCE_IMAGE
           docker push $SOURCE_IMAGE
           docker image rm $SOURCE_IMAGE
       # WHEN
@@ -34,20 +31,58 @@ jobs:
         run: |
           images_are_equal=$(./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE)
           [ "$images_are_equal" = "true" ] || exit 1
+  test-unequal-images:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+      SOURCE_IMAGE: romanlamsal/docker-retag-test:test-unequal
+      TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}-unequal
+    steps:
+      # GIVEN
+      - uses: actions/checkout@v1
+      - run: |
+          docker login -u romanlamsal -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          docker pull -q alpine:latest
+      - name: "Push example source image to registry"
+        run: |
+          echo "FROM alpine:latest" | docker build -t testimage:test-unequal -
+          docker tag testimage:test-unequal $SOURCE_IMAGE
+          docker push $SOURCE_IMAGE
+          docker image rm $SOURCE_IMAGE
+      - name: "Push example target image to registry"
+        # a new build will generate a different digest due to the timestamp being part of the digest
+        run: |
+          echo "FROM alpine:latest" | docker build -t testimage:${{ github.sha }} -
+          docker tag testimage:${{ github.sha }} $TARGET_IMAGE
+          docker push $TARGET_IMAGE
+          docker image rm $TARGET_IMAGE
+      # WHEN
+      - name: "Run action"
+        uses: ./
+        with:
+          source-image: "$SOURCE_IMAGE"
+          target-image: "$TARGET_IMAGE"
+      # THEN
+      - name: "Compare digests"
+        run: |
+          images_are_equal=$(./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE)
+          [ "$images_are_equal" = "false" ] || exit 1
   test-non-existing-source-image:
       runs-on: ubuntu-latest
       env:
         TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}
       steps:
+        - uses: actions/checkout@v1
+        # WHEN
         - name: "Run action and expect to fail"
           id: "docker-retag"
           uses: ./
           with:
-            # WHEN
+            # GIVEN
             source-image: "foo:bar"
             target-image: "$TARGET_IMAGE"
           continue-on-error: true
         # THEN
         - name: "Fail when docker-retag did not fail"
-          if: steps.docker-retag.outcome != "failure"
+          if: steps.docker-retag.outcome != 'failure'
           run: exit 1

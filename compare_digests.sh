@@ -1,6 +1,6 @@
 #!/bin/bash
 # 2020-12-21: DOCKER_CLI_EXPERIMENTAL=enabled must be set in order for this to work
-# Returns 0 when there are no changes and 1 when there are changes
+# Returns "true" when there are changes and "false" when there are no changes
 SOURCE_IMAGE="$1"
 TARGET_IMAGE="$2"
 
