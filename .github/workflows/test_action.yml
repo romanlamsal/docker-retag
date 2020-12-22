@@ -3,7 +3,7 @@ name: running-tests
 on: push
 
 jobs:
-  run-tests:
+  test-equal-images:
     runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: enabled
@@ -34,3 +34,20 @@ jobs:
         run: |
           images_are_equal=$(./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE)
           [ "$images_are_equal" = "true" ] || exit 1
+  test-non-existing-source-image:
+      runs-on: ubuntu-latest
+      env:
+        TARGET_IMAGE: romanlamsal/docker-retag-test:${{ github.sha }}
+      steps:
+        - name: "Run action and expect to fail"
+          id: "docker-retag"
+          uses: ./
+          with:
+            # WHEN
+            source-image: "foo:bar"
+            target-image: "$TARGET_IMAGE"
+          continue-on-error: true
+        # THEN
+        - name: "Fail when docker-retag did not fail"
+          if: steps.docker-retag.outcome != "failure"
+          run: exit 1
