@@ -13,7 +13,7 @@ uses: romanlamsal/docker-retag@v1
 ````
 Will result in the image ``docker.io/someone/something:test`` having the additional tag ``latest``.
 
-There is an example workflow which is used for testing where the action can be seen... in action.
+[Here is an example workflow](./.github/workflows/test_action.yml) which is used for testing where the action can be seen... in action.
 
 ## Caveats
 The action compares the images' manifests in order to determine whether an update is actually
