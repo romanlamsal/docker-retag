@@ -12,8 +12,8 @@ runs:
   steps:
     - name: "Check if images are already equal."
       run: |
-        ./compare_digests.sh ${{ inputs.source-image }} ${{ inputs.target-image }}
-        echo "images_are_equal=$?" >> $GITHUB_ENV
+        images_are_equal=$(./compare_digests.sh ${{ inputs.source-image }} ${{ inputs.target-image }})
+        echo "images_are_equal=$images_are_equal" >> $GITHUB_ENV
       shell: bash
       env:
         # TODO: once 'docker manifest' is non-experimental, remove this
@@ -23,13 +23,10 @@ runs:
     # TODO: Try to retag without pull
     - name: "Update image tag."
       run: |
-        if [ "$images_are_equal" -eq 2 ]; then
+        if [ "$images_are_equal" = "false" ]; then
           docker pull -q ${{ inputs.source-image }}
           docker tag ${{ inputs.source-image }} ${{ inputs.target-image }}
           docker push ${{ inputs.target-image }}
           exit 0
-        elif [ "$images_are_equal" -eq 1]; then
-          echo "An error occured."
-          exit 1
         fi
       shell: bash

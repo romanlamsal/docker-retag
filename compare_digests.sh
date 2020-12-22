@@ -9,10 +9,12 @@ if docker manifest inspect "$SOURCE_IMAGE" > sourcemanifest.json; then
   if docker manifest inspect "$TARGET_IMAGE" > targetmanifest.json; then
     TARGET_IMAGE_DIGEST=$(jq --raw-output '.config.digest' < ./targetmanifest.json)
     if [ "$SOURCE_IMAGE_DIGEST" = "$TARGET_IMAGE_DIGEST" ]; then
+      echo "false"
       exit 0
     fi
   fi
-  exit 2
+  echo "true"
+else
+  exit 1
 fi
 
-exit 1

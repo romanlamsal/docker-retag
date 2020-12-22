@@ -32,15 +32,5 @@ jobs:
       # THEN
       - name: "Compare digests"
         run: |
-          ./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE
-          if [ "$?" -eq 2 ]; then
-            exit 0
-          fi
-          # docker pull $SOURCE_IMAGE
-          # docker pull $TARGET_IMAGE
-          # SOURCE_DIGEST=docker inspect --format='{{index .RepoDigests 0}}' $SOURCE_IMAGE
-          # TARGET_DIGEST=docker inspect --format='{{index .RepoDigests 0}}' $TARGET_IMAGE
-          # echo "$SOURCE_DIGEST"
-          # echo "$TARGET_DIGEST"
-          # echo [ "$SOURCE_DIGEST" = "$TARGET_DIGEST"]
-          # exit [ "$SOURCE_DIGEST" = "$TARGET_DIGEST"]
+          images_are_equal=$(./compare_digests.sh $SOURCE_IMAGE $TARGET_IMAGE)
+          [ "$images_are_equal" = "true" ] || exit 1
