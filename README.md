@@ -23,7 +23,7 @@ required or not. This comes with the caveat that currently (2020/12/22) the flag
 
 ## ToDos
 
-- [ ] Create input which to control if manifests should be compared or not
+- [ ] Create input to control if manifests should be compared or not
 - [ ] Replace ``docker push`` with ``docker manifest push`` in order to speed up the process
 of re-tagging
     - current behavior is to first pull the source image, tag it as the target image and push
